@@ -1,84 +1,98 @@
-# n8n AI WhatsApp Sales Agent
+# WhatsApp AI Pre-Sales Orchestration
 
-An autonomous AI sales agent built with **n8n**, **GPT-4o**, and **Chatwoot** that handles the full sales cycle over WhatsApp — from first contact to appointment booking — without human intervention.
+**An n8n-based portfolio project by [Eduardo Ayala](https://github.com/eduardoayalaq04), focused on Applied AI and GTM workflow engineering.**
 
-## What it does
+This repository contains sanitized workflow exports for WhatsApp pre-sales: multimodal intake, lead qualification, conversation memory, appointment scheduling, follow-up eligibility and team notifications. The design combines **n8n, OpenAI, Chatwoot, Google Calendar, Google Sheets, PostgreSQL, Redis and Telegram**.
 
-This system receives WhatsApp messages via Chatwoot webhooks, processes them through an AI agent powered by GPT-4o, and responds intelligently based on the prospect's intent, stage in the funnel, and the services they're interested in.
+**The agent does not close sales or collect payment.** Commercial closing, proposals and exceptional requests are handed to people. That human boundary is intentional.
 
-### Key capabilities
+> **Status: portfolio reference, not a production-ready deployment.** The `Registrar_Lead` subworkflow is not included yet. Its export and interface validation are pending. Local tests exercise the reminder-selection JavaScript; they do not validate n8n integration, provider compatibility, delivery or business performance. All three exports are saved with `active: false` for staging review.
 
-- **Multi-format input**: Processes text, voice messages (via Whisper transcription), and images (via GPT-4o vision)
-- **Lead qualification**: Scores and classifies prospects automatically across multiple service lines
-- **Appointment booking**: Checks Google Calendar availability and books meetings with Google Meet links
-- **Automated follow-ups**: Sends personalized follow-up messages based on lead stage, service interest, and time since last interaction
-- **Team escalation**: Notifies the team via Telegram when human intervention is needed
-- **Appointment reminders**: Sends WhatsApp confirmation messages on the day of scheduled appointments
-- **Message buffering**: Uses Redis to aggregate rapid consecutive messages before processing
-- **Deduplication**: Prevents processing the same message twice
-- **Conversation memory**: Maintains context across messages using PostgreSQL chat memory
+## What is represented in the exports
+
+- **Multimodal intake:** text, audio-transcription and GPT-4o image-analysis paths. The transcription node does not explicitly pin a model; GPT-4o is not claimed as the audio transcription model.
+- **Tool-based qualification:** service/intent rules, heuristic lead scoring, knowledge-base lookup and a call to the pending lead-registration subworkflow.
+- **Conversation memory:** PostgreSQL chat-memory configuration, keyed by sender; Redis is used separately for buffering and deduplication.
+- **Appointment tools:** calendar lookup, creation with Meet and update operations. Ownership and scheduling guards need deterministic enforcement before production use.
+- **Follow-ups:** deterministic templates selected by lead stage, service interest, counter and elapsed time; not LLM-generated follow-up copy.
+- **Human handoff:** Telegram notification and an incoming/human-assignee check. Notification is not a durable handoff lock.
+- **Operational mechanisms:** Redis buffering/deduplication, retries and an agent-error fallback. These are implemented patterns, not guarantees of exactly-once processing or comprehensive fault handling.
 
 ## Architecture
 
-```
-WhatsApp → Chatwoot Webhook → n8n
-                                 ├── Message dedup (Redis)
-                                 ├── Human/bot routing check
-                                 ├── Format detection (text/audio/image)
-                                 │     ├── Audio → Whisper STT
-                                 │     ├── Image → GPT-4o Vision
-                                 │     └── Text → direct
-                                 ├── Message buffer (Redis, 10s window)
-                                 ├── GPT-4o Agent with tools:
-                                 │     ├── Knowledge Base (Google Sheets)
-                                 │     ├── Lead Registration (sub-workflow)
-                                 │     ├── Google Calendar (check/book/update)
-                                 │     ├── Team Escalation (Telegram)
-                                 │     ├── SEO Audit Bot (Telegram)
-                                 │     ├── SEO Fit Lookup (Google Sheets)
-                                 │     ├── Calculator
-                                 │     └── Think (reasoning tool)
-                                 ├── Response splitting (multi-part messages)
-                                 └── Chatwoot API (send messages)
+```mermaid
+flowchart TD
+  W[WhatsApp / Chatwoot webhook] --> D[Redis dedup attempt]
+  D --> H[Incoming / human-assignee filter]
+  H --> M[Text / audio / image intake]
+  M --> B[Redis buffer]
+  B --> A[AI agent]
+  P[(PostgreSQL conversation memory)] <--> A
+  A --> K[Sheets knowledge base / SEO lookup]
+  A --> R[Registrar_Lead - export pending]
+  A --> C[Google Calendar tools]
+  A --> T[Telegram team notification]
+  A --> O[Chatwoot reply]
+  S[Scheduled follow-up] --> L[Sheets lead selection]
+  L --> F[Templated Chatwoot message]
+  F --> U[Sheets follow-up counter]
+  Q[Scheduled reminder] --> E[Calendar event selection]
+  E --> N[Chatwoot note / WhatsApp template]
 ```
 
-## Workflows
+The diagram describes the exported topology, including limitations; it is not evidence of an end-to-end successful run.
 
-| File | Description |
-|------|-------------|
-| `AgencyBot - Flujo 1 v3.json` | Main AI agent workflow — handles all incoming WhatsApp conversations |
-| `AgencyBot - Confirmar Cita.json` | Daily cron job (9am Mon-Fri) that sends appointment reminders |
-| `AgencyBot - Followup 24hrs v4.json` | Automated follow-up for leads that haven't responded in 6-24 hours |
+## Included workflows
 
-## Tech stack
+- `AgencyBot - Flujo 1 v3.json`: primary intake, agent, tools, memory and response workflow.
+- `AgencyBot - Followup 24hrs v4.json`: follow-up eligibility targeting 6–24 hours since the CRM interaction timestamp. Production use requires proving that timestamp represents the latest inbound message and rechecking the messaging window.
+- `AgencyBot - Confirmar Cita.json`: weekday reminder workflow with locally tested event-selection logic.
+- **Pending:** `Registrar_Lead` export, schema/mapping review and integration tests. Adding the file alone does not establish readiness.
 
-- **n8n** — workflow automation and orchestration
-- **GPT-4o** — AI agent (chat + vision + audio transcription)
-- **Chatwoot** — WhatsApp Business API and conversation management
-- **Google Calendar** — appointment scheduling with Meet integration
-- **Google Sheets** — knowledge base, lead database, and SEO fit data
-- **Telegram** — team notifications and escalation
-- **Redis** — message buffering and deduplication
-- **PostgreSQL** — conversation memory persistence
+## Local tests — no credentials or paid calls
 
-## Setup
+Use a current supported Node.js release with `node:test` (Node 22 or newer recommended):
 
-1. Import the JSON workflows into your n8n instance
-2. Configure the required credentials in n8n:
-   - OpenAI API
-   - Google Calendar OAuth2
-   - Google Sheets OAuth2
-   - Telegram Bot API
-   - Redis connection
-   - PostgreSQL connection
-3. Set up Chatwoot with a WhatsApp inbox and configure the webhook to point to your n8n webhook URL
-4. Replace all `YOUR_*` placeholder values with your actual credentials and IDs
-5. Activate the workflows
+```bash
+node --test tests/workflows.test.cjs
+```
 
-## Security note
+Tests load the reminder Code node from the actual JSON export and execute it with synthetic fixtures, a fixed clock and no n8n runtime. Cases cover empty/single/multiple events, CDMX date boundaries, invalid/cancelled/past/all-day events, URL validation and conflicting conversation markers. The harness is for these reviewed local fixtures, not a security sandbox for arbitrary untrusted code.
 
-All credentials, API tokens, webhook URLs, and personally identifiable information have been replaced with descriptive placeholders (e.g., `YOUR_CHATWOOT_API_TOKEN`). The workflows are fully functional templates — just add your own credentials.
+There is no hosted CI configured. No conversion lift, latency, cost savings, scoring accuracy or live integration pass rate is claimed.
+
+## Safe staging setup
+
+**Do not import these exports into a production instance and immediately activate them.**
+
+1. Use an isolated staging n8n instance and non-production accounts. The exact compatible n8n version has not been established; inspect node `typeVersion` values and verify them against your installation.
+2. Import the exports with workflows inactive. No n8n provisioning, Redis/PostgreSQL deployment or database migration is bundled.
+3. Add credentials using n8n's credential store: OpenAI, Calendar OAuth, Sheets OAuth, Telegram, Redis and PostgreSQL. Do not commit credentials or a populated environment file.
+4. Replace `YOUR_*` placeholders and reserved `*.example.com` URLs. Review hardcoded Chatwoot account `1` and inbox `2`; they must match staging, not be accepted as safe defaults.
+5. Add and review `Registrar_Lead`; document Sheets schemas, nullable-field rules, upsert keys and inbound/outbound timestamps. Its preservation behavior is not verified in this package.
+6. Configure restricted OAuth scopes, webhook authentication/origin verification, attachment egress controls, data retention and approved WhatsApp template `confirmacion_cita`. See [security boundaries](docs/security.md).
+7. Run local tests, then synthetic integration/smoke tests for intake, lead writes, booking, handoff, reminders and follow-up delivery. Verify permissions, failures, duplicates and message-window rules before any activation.
+
+## Example content, privacy and provenance
+
+`YourAgency` and the `*.example.com` destinations are placeholders. The prompt's catalog, prices, schedules, delivery periods and financing terms are **illustrative configuration**, not a current commercial offer. Published customer success stories and third-party comparisons have been removed from the current export; do not invent testimonials or project impact.
+
+Credentials and deployment identifiers in these exports are placeholders; `pinData` is empty. This does **not** make the workflow safe to expose publicly as an unauthenticated service. Public GitHub ownership and authorship remain visible. A local-machine author address exists in the initial commit; it is not a credential, and this update does not erase Git history. Earlier revisions also retain the previous prompt content. See [publication and history notes](docs/security.md).
+
+**Authorship:** Eduardo owns this portfolio project and its workflow design/configuration. AI tools assisted with code, documentation and review. The sanitized exports demonstrate the integration design; claims about live deployment, exclusive originality or measured commercial outcomes require separate evidence. n8n node implementations and connected services remain the work of their respective authors/providers.
+
+## Known limitations and next work
+
+- Missing lead-registration dependency and no end-to-end validation.
+- Webhook trust, calendar ownership and tool authorization are not enforced by prompt instructions.
+- Non-atomic deduplication/buffering and incomplete failure recovery.
+- Follow-up counter can advance after failed delivery; its timestamp/count validation needs hardening.
+- Reminder selection is fixed and tested, but external event ownership, delivery idempotency and note/send ordering remain unresolved.
+- Voice-call policy and Meet/attendee configuration need reconciliation; debounce expressions and input timestamp formats need runtime validation.
+- Multi-account memory isolation, durable handoff, retention/deletion and attachment restrictions need implementation.
+
+These are tracked as [production hardening requirements](docs/security.md), not presented as completed safeguards.
 
 ## License
 
-MIT
+[MIT](LICENSE) for repository code, configuration and documentation. No trademark rights, third-party service rights, customer-data rights or connected-service access are granted.
