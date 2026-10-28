@@ -1,0 +1,210 @@
+{
+  "name": "AgencyBot - Confirmar Cita",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1-5"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        336,
+        -112
+      ],
+      "id": "5e11e557-a7b7-4363-b14e-3674d070fbb9",
+      "name": "Diario 9am CDMX"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_CALENDAR_ID@group.calendar.google.com",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.2,
+      "position": [
+        560,
+        -112
+      ],
+      "id": "cff04bc2-4814-4b1f-9281-078e9460b47f",
+      "name": "Eventos del Dia",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "YOUR_GOOGLE_CALENDAR_CREDENTIAL_ID",
+          "name": "your-email@example.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "  const eventos = [];\n  const ahora = new Date();\n  const hoyStr = ahora.toLocaleDateString('en-CA', { timeZone: 'America/Mexico_City' });\n\n  for (const item of $input.all()) {\n    const evento = item.json;\n\n    // Extraer fecha y hora de la cita\n    const startStr = evento.start?.dateTime || evento.start;\n    if (!startStr) continue;\n\n    const startDate = new Date(startStr);\n    const fechaEvento = startDate.toLocaleDateString('en-CA', { timeZone: 'America/Mexico_City' });\n\n    // Solo eventos de HOY\n    if (fechaEvento !== hoyStr) continue;\n\n    const hora = startDate.toLocaleString('es-MX', {\n      timeZone: 'America/Mexico_City',\n      hour: 'numeric',\n      minute: '2-digit',\n      hour12: true\n    });\n\n    // Extraer hangoutLink\n    const hangoutLink = evento.hangoutLink || evento.conferenceData?.entryPoints?.[0]?.uri || '';\n    if (!hangoutLink) continue;\n\n    // Extraer Conversation ID de la descripcion\n    const description = evento.description || '';\n    const convMatch = description.match(/CONVERSATION_ID:\\s*(\\S+)/);\n    const conversationId = convMatch ? convMatch[1].trim() : '';\n\n    // Saltar si no tiene conversation_id o es \"undefined\"\n    if (!conversationId || conversationId === 'undefined') continue;\n\n    // Extraer WhatsApp del summary (despues del ultimo \" - \")\n    const summary = evento.summary || '';\n    const parts = summary.split(' - ');\n    const whatsapp = parts.length > 1 ? parts[parts.length - 1].trim().replace(/^\\+/, '') : '';\n\n    eventos.push({\n      json: {\n        hora: hora,\n        hangoutLink: hangoutLink,\n        conversation_id: conversationId,\n        whatsapp: whatsapp,\n        summary: summary\n      }\n    });\n  }"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        784,
+        -112
+      ],
+      "id": "7e751341-d641-4585-b2ca-710d06d031a3",
+      "name": "Extraer Datos"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://your-chatwoot-instance.example.com/api/v1/accounts/1/conversations/{{ $('Extraer Datos').item.json.conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "YOUR_CHATWOOT_API_TOKEN"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: '📋 Se envio recordatorio automatico de cita de hoy a las ' + $('Extraer Datos').item.json.hora + '. Link: ' + $('Extraer Datos').item.json.hangoutLink, private: true, message_type: 'outgoing', content_type: 'text' }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1008,
+        -112
+      ],
+      "id": "49270b8e-02cd-4d3e-a715-629a83798650",
+      "name": "Nota Interna",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://your-chatwoot-instance.example.com/api/v1/accounts/1/conversations/{{ $('Extraer Datos').item.json.conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "YOUR_CHATWOOT_API_TOKEN"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: '', template_params: { name: 'confirmacion_cita', category: 'utility', language: 'es_MX', processed_params: { '1': $('Extraer Datos').item.json.hora, '2': $('Extraer Datos').item.json.hangoutLink } }, message_type: 'outgoing' }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1216,
+        -112
+      ],
+      "id": "648ac4ce-237d-4839-afde-58f872aa1d7d",
+      "name": "Enviar Confirmacion",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "content": "## 📅 Confirmar Cita\n\nFlujo automático que envía recordatorio de cita el día del evento.\n\n**Lógica:**\n1. Corre diario a las 9am CDMX (L-V)\n2. Lee eventos del día de Google Calendar\n3. Extrae hora, link de Meet, Conversation ID y WhatsApp\n4. Envía nota interna en Chatwoot (contexto para AgencyBot)\n5. Envía template 'confirmacion_cita' al prospecto\n\n**REQUISITO:** El nodo 'Agendar Cita' del Flujo 1 debe guardar CONVERSATION_ID en la descripción del evento.",
+        "height": 300,
+        "width": 420,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        336,
+        -448
+      ],
+      "id": "47fe033f-9af4-4ae1-89e8-7c527026fc2d",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Diario 9am CDMX": {
+      "main": [
+        [
+          {
+            "node": "Eventos del Dia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eventos del Dia": {
+      "main": [
+        [
+          {
+            "node": "Extraer Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer Datos": {
+      "main": [
+        [
+          {
+            "node": "Nota Interna",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nota Interna": {
+      "main": [
+        [
+          {
+            "node": "Enviar Confirmacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "timezone": "America/Mexico_City",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "3b9c6271-7c59-4a51-a4cc-c28fbc0f1aa7",
+  "meta": {
+    "instanceId": "YOUR_N8N_INSTANCE_ID"
+  },
+  "nodeGroups": [],
+  "id": "YOUR_WORKFLOW_ID",
+  "tags": []
+}

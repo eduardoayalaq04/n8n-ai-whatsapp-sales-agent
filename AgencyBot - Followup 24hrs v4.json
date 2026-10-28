@@ -1,0 +1,262 @@
+{
+  "name": "AgencyBot - Followup 24hrs v4",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            },
+            {
+              "field": "cronExpression",
+              "expression": "0 15 * * 1-5"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        368
+      ],
+      "id": "4dccc429-cba0-44e5-a5d5-32aff545145b",
+      "name": "9am diario + 3pm L-V"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEETS_LEADS_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Leads"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        208,
+        368
+      ],
+      "id": "323c6791-a68e-488b-a3db-8d476d60992e",
+      "name": "Leer Leads",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "your-email@example.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const ahora = new Date();\n\nconst etapasValidas = [\n  'nuevo',\n  'calificando',\n  'clasificado',\n  'precio_dado'\n];\n\nconst elegibles = [];\n\nfor (const item of $input.all()) {\n  const lead = item.json;\n\n  // Validar etapa\n  if (!etapasValidas.includes(lead.Etapa)) continue;\n\n  // Validar que no se haya enviado follow-up ya\n  const followups = parseInt(lead['Followups Enviados'] || '0');\n  if (followups > 0) continue;\n\n  // Excluir leads escalados (ya los maneja el equipo manualmente)\n  const etiquetas = (lead.Etiquetas || '').toLowerCase();\n  if (etiquetas.includes('escalado')) continue;\n\n  // Validar que tenga Conversation ID\n  const convId = String(lead['Conversation ID'] || '').trim();\n  if (!convId || convId === 'undefined') continue;\n\n  // Validar que tenga WhatsApp real (no null)\n  const whatsapp = String(lead.WhatsApp || '').trim();\n  if (!whatsapp || whatsapp === 'null' || whatsapp === 'undefined') continue;\n\n  // Validar que tenga Ultima Interaccion\n  const ultimaStr = lead['Ultima Interaccion'];\n  if (!ultimaStr) continue;\n\n  // Calcular horas desde ultima interaccion\n  const ultimaInteraccion = new Date(ultimaStr);\n  const horasTranscurridas = (ahora - ultimaInteraccion) / (1000 * 60 * 60);\n\n  // Entre 6 y 24 horas (dentro de la ventana de Meta)\n  if (horasTranscurridas >= 6 && horasTranscurridas < 24) {\n    const etapa = lead.Etapa;\n    const servicio = (lead.Servicio || '').toLowerCase();\n    const nombre = lead.Nombre || '';\n\n    // Saludo personalizado\n    const saludo = nombre ? `Hola ${nombre}!` : 'Hola!';\n\n    let mensaje = '';\n\n    if (etapa === 'nuevo') {\n      if (servicio.includes('chatbot')) {\n        mensaje = `${saludo} Vi que nos escribiste sobre chatbots para tu negocio. Si tienes alguna duda o quieres platicar cómo funciona, aquí estamos 😊`;\n      } else if (servicio.includes('automatizacion')) {\n        mensaje = `${saludo} Vi que nos escribiste sobre automatización. Si quieres platicar qué proceso te gustaría automatizar, con gusto te ayudo 😊`;\n      } else if (servicio.includes('web_seo')) {\n        mensaje = `${saludo} Vi que nos escribiste sobre Activos Digitales para aparecer en Google. Si tienes alguna duda o quieres que te platique cómo funciona, aquí estamos 😊`;\n      } else if (servicio.includes('web_sin_seo')) {\n        mensaje = `${saludo} Vi que nos escribiste sobre diseño web. Si tienes alguna duda o quieres ver ejemplos de nuestro trabajo, con gusto te ayudo 😊`;\n      } else {\n        mensaje = `${saludo} Vi que nos escribiste y nos quedamos pendientes. Si tienes alguna duda sobre nuestros servicios, aquí estamos para ayudarte 😊`;\n      }\n    } else if (etapa === 'calificando') {\n      if (servicio.includes('chatbot')) {\n        mensaje = `${saludo} Nos quedamos platicando sobre el chatbot para tu negocio. Tienes alguna duda? Con gusto te ayudo 😊`;\n      } else if (servicio.includes('automatizacion')) {\n        mensaje = `${saludo} Nos quedamos platicando sobre la automatización. Quieres que retomemos? 😊`;\n      } else if (servicio.includes('web_seo')) {\n        mensaje = `${saludo} Nos quedamos platicando sobre tu Activo Digital. Si quieres que te platique más o agendar una llamada rápida, aquí estoy 😊`;\n      } else if (servicio.includes('web_sin_seo')) {\n        mensaje = `${saludo} Nos quedamos platicando sobre tu página web. Tienes alguna duda? 😊`;\n      } else {\n        mensaje = `${saludo} Nos quedamos platicando y quería ver si tienes alguna duda. Aquí estamos 😊`;\n      }\n    } else if (etapa === 'clasificado' || etapa === 'precio_dado') {\n      if (servicio.includes('chatbot')) {\n        mensaje = `${saludo} Te quería recordar la info que te compartí sobre los chatbots. Si tienes alguna duda o quieres agendar una demo, con gusto 📅`;\n      } else if (servicio.includes('automatizacion')) {\n        mensaje = `${saludo} Te quería recordar lo que platicamos sobre automatización. Quieres agendar una videollamada para ver los detalles? 📅`;\n      } else if (servicio.includes('web_seo')) {\n        mensaje = `${saludo} Te quería recordar la info de los Activos Digitales que te compartí. Si quieres platicar más a detalle o agendar una llamada, aquí estoy 📅`;\n      } else if (servicio.includes('web_sin_seo')) {\n        mensaje = `${saludo} Te quería recordar la info que te compartí sobre tu página web. Si quieres avanzar o tienes alguna duda, aquí estamos 😊`;\n      } else {\n        mensaje = `${saludo} Te quería recordar la info que te compartimos. Si tienes alguna duda o quieres agendar una llamada, con gusto te ayudo 📅`;\n      }\n    }\n\n    elegibles.push({\n      json: {\n        mensaje: mensaje,\n        conversation_id: convId,\n        whatsapp: whatsapp,\n        followups_nuevo: String(followups + 1),\n        nombre: nombre,\n        negocio: lead.Negocio || '',\n        etapa: etapa,\n        servicio: servicio\n      }\n    });\n  }\n}\n\nreturn elegibles;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        432,
+        368
+      ],
+      "id": "349fc31e-0cc6-49a4-bbce-47082ca44b72",
+      "name": "Filtrar Elegibles"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://your-chatwoot-instance.example.com/api/v1/accounts/1/conversations/{{ $('Filtrar Elegibles').item.json.conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "YOUR_CHATWOOT_API_TOKEN"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: $('Filtrar Elegibles').item.json.mensaje, private: false, message_type: 'outgoing', content_type: 'text' }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        672,
+        368
+      ],
+      "id": "252e5ce2-cab0-4e87-822c-e99011325480",
+      "name": "Enviar Follow-up",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEETS_LEADS_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Leads"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "WhatsApp": "={{ $('Filtrar Elegibles').item.json.whatsapp }}",
+            "Followups Enviados": "={{ $('Filtrar Elegibles').item.json.followups_nuevo }}",
+            "Ultima Interaccion": "={{ $now.setZone('America/Mexico_City').toISO() }}"
+          },
+          "matchingColumns": [
+            "WhatsApp"
+          ],
+          "schema": [
+            {
+              "id": "WhatsApp",
+              "displayName": "WhatsApp",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Followups Enviados",
+              "displayName": "Followups Enviados",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Ultima Interaccion",
+              "displayName": "Ultima Interaccion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        880,
+        368
+      ],
+      "id": "8cc8bd23-8ae9-4e87-8cf7-50e650dd1abf",
+      "name": "Actualizar Lead",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "your-email@example.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Followup 24hrs v4\n\nFlujo automático que envía follow-up a leads que no respondieron.\n\n**Ejecuciones:**\n- 9am todos los días (L-D)\n- 3pm lunes a viernes\n\n**Lógica:**\n1. Lee todos los leads del Google Sheet\n2. Filtra: entre 6-24hrs sin responder, Followups=0, no escalados\n3. Envía mensaje personalizado según servicio y etapa vía Chatwoot\n4. Actualiza Followups Enviados a 1 en el Sheet\n\n**Etapas elegibles:** nuevo, calificando, clasificado, precio_dado\n\n**NO envía a:** cita_agendada, no_interesado, fuera_de_scope, leads escalados, leads con Followups > 0, leads con más de 24hrs, leads con WhatsApp null",
+        "height": 380,
+        "width": 420,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "1dade19f-6294-4a8d-859c-5377fa63e790",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "9am diario + 3pm L-V": {
+      "main": [
+        [
+          {
+            "node": "Leer Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Leads": {
+      "main": [
+        [
+          {
+            "node": "Filtrar Elegibles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar Elegibles": {
+      "main": [
+        [
+          {
+            "node": "Enviar Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Follow-up": {
+      "main": [
+        [
+          {
+            "node": "Actualizar Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "timezone": "America/Mexico_City",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "ec5b0b61-4188-4929-9b2b-1df6339b3c10",
+  "meta": {
+    "instanceId": "YOUR_N8N_INSTANCE_ID"
+  },
+  "nodeGroups": [],
+  "id": "YOUR_WORKFLOW_ID",
+  "tags": []
+}
