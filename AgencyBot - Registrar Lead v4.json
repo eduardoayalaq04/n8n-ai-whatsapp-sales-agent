@@ -3,6 +3,46 @@
   "nodes": [
     {
       "parameters": {
+        "jsCode": "const items = $input.all();\nif (items.length !== 1) throw new Error('Se requiere una sola entrada');\nconst input = items[0].json;\nconst clean = value => {\n  if (value === undefined || value === null) return '';\n  if (!['string', 'number', 'boolean'].includes(typeof value)) throw new Error('Valor no escalar');\n  const text = String(value).trim();\n  return text.toLowerCase() === 'null' ? '' : text;\n};\nconst lead = Object.fromEntries(Object.entries(input).map(([key, value]) => [key, clean(value)]));\nconst phone = (lead.sessionid || '').replace(/^\\+/, '');\nif (!/^[1-9][0-9]{7,14}$/.test(phone)) throw new Error('WhatsApp: telefono internacional invalido');\nlead.sessionid = phone;\nconst conversation = lead.conversation_id || '';\nif (conversation && (!/^[1-9][0-9]*$/.test(conversation) || !Number.isSafeInteger(Number(conversation)))) throw new Error('conversation_id invalido');\nlead.conversation_id = conversation;\nreturn [{ json: lead }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, -112],
+      "id": "7a0a429f-d45b-4bf0-a460-f41481d237b3",
+      "name": "Validar Entrada"
+    },
+    {
+      "parameters": {
+        "jsCode": "const lead = $('Normalizar Datos').first().json;\nconst rows = $input.all().map(item => item.json).filter(row => Object.keys(row).length > 0);\nfor (const row of rows) {\n  if (String(row.WhatsApp) !== lead.sessionid) throw new Error('WhatsApp inesperado en resultado de busqueda');\n}\nconst service = lead.servicio_interes || '';\nconst matches = service ? rows.filter(row => String(row.Servicio || '') === service) : rows;\nif (matches.length > 1) throw new Error('Lead ambiguo: multiples filas coincidentes');\nconst existing = matches[0];\nlet rowNumber;\nif (existing) {\n  const key = String(existing.row_number);\n  rowNumber = Number(key);\n  if (!/^[1-9][0-9]*$/.test(key) || !Number.isSafeInteger(rowNumber) || rowNumber < 2) throw new Error('row_number invalido');\n} else if (!service) {\n  throw new Error('servicio_interes requerido para crear lead');\n}\nconst fields = {sessionid:'WhatsApp', servicio_interes:'Servicio', nombre:'Nombre', negocio:'Negocio', giro:'Giro', ciudad:'Ciudad', tiene_web:'Tiene Web', url_web:'URL Web', segmento:'Segmento', senal_presupuesto:'Senal Presupuesto', paquete_recomendado:'Paquete Recomendado', elegible_offmenu:'Elegible Offmenu', disclosure_confirmado:'Disclosure Confirmado', etapa:'Etapa', score:'Score', etiquetas:'Etiquetas', notas:'Notas', conversation_id:'Conversation ID'};\nconst now = new Date().toISOString();\nconst row = {Fecha: existing ? String(existing.Fecha ?? '') : now, 'Followups Enviados': existing ? String(existing['Followups Enviados'] ?? '') : '0'};\nfor (const [key, column] of Object.entries(fields)) {\n  const value = lead[key];\n  const supplied = value !== undefined && value !== null && String(value).trim() !== '' && String(value).trim().toLowerCase() !== 'null';\n  row[column] = supplied ? String(value) : String(existing?.[column] ?? '');\n}\n// Merge CRM label tokens without removing existing labels. Chatwoot remains disconnected.\nif (existing && lead.etiquetas) {\n  row.Etiquetas = [...new Set((String(existing.Etiquetas ?? '') + ',' + lead.etiquetas).split(',').map(label => label.trim()).filter(Boolean))].join(',');\n}\nrow['Ultima Interaccion'] = now;\nreturn [{ json: { exists: Boolean(existing), ...(existing ? { row_number: rowNumber } : {}), row } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, -112],
+      "id": "35406a4f-bc20-48ca-80be-49714ae53dc5",
+      "name": "Resolver y Fusionar Lead"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {"id": "capi-enabled", "name": "enabled", "value": false, "type": "boolean"},
+            {"id": "capi-consent", "name": "consent_verified", "value": false, "type": "boolean"},
+            {"id": "capi-idempotency", "name": "durable_idempotency_ready", "value": false, "type": "boolean"},
+            {"id": "capi-event-id", "name": "event_id", "value": "", "type": "string"},
+            {"id": "capi-event-time", "name": "event_time", "value": "", "type": "string"}
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1776, 96],
+      "id": "463b77fc-033a-4490-8bbf-e3bc4b33d0d1",
+      "name": "Configuracion CAPI (confiable)"
+    },
+    {
+      "parameters": {
         "workflowInputs": {
           "values": [
             {
@@ -214,14 +254,10 @@
             {
               "lookupColumn": "WhatsApp",
               "lookupValue": "={{ $('Normalizar Datos').item.json.sessionid }}"
-            },
-            {
-              "lookupColumn": "Servicio",
-              "lookupValue": "={{ $('Normalizar Datos').item.json.servicio_interes }}"
             }
           ]
         },
-        "options": {}
+        "options": {"returnFirstMatch": false}
       },
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
@@ -251,11 +287,11 @@
           "conditions": [
             {
               "id": "lead_exists",
-              "leftValue": "={{ $json.WhatsApp }}",
-              "rightValue": "",
+              "leftValue": "={{ $json.exists }}",
+              "rightValue": true,
               "operator": {
-                "type": "string",
-                "operation": "exists",
+                "type": "boolean",
+                "operation": "true",
                 "singleValue": true
               }
             }
@@ -291,28 +327,31 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "WhatsApp": "={{ $('Normalizar Datos').item.json.sessionid }}",
-            "Servicio": "={{ $('Normalizar Datos').item.json.servicio_interes }}",
-            "Nombre": "={{ $('Normalizar Datos').item.json.nombre }}",
-            "Negocio": "={{ $('Normalizar Datos').item.json.negocio }}",
-            "Giro": "={{ $('Normalizar Datos').item.json.giro }}",
-            "Ciudad": "={{ $('Normalizar Datos').item.json.ciudad }}",
-            "Tiene Web": "={{ $('Normalizar Datos').item.json.tiene_web }}",
-            "URL Web": "={{ $('Normalizar Datos').item.json.url_web }}",
-            "Segmento": "={{ $('Normalizar Datos').item.json.segmento }}",
-            "Senal Presupuesto": "={{ $('Normalizar Datos').item.json.senal_presupuesto }}",
-            "Paquete Recomendado": "={{ $('Normalizar Datos').item.json.paquete_recomendado }}",
-            "Elegible Offmenu": "={{ $('Normalizar Datos').item.json.elegible_offmenu }}",
-            "Disclosure Confirmado": "={{ $('Normalizar Datos').item.json.disclosure_confirmado }}",
-            "Etapa": "={{ $('Normalizar Datos').item.json.etapa }}",
-            "Score": "={{ $('Normalizar Datos').item.json.score }}",
-            "Etiquetas": "={{ $('Normalizar Datos').item.json.etiquetas }}",
-            "Notas": "={{ $('Normalizar Datos').item.json.notas }}",
-            "Ultima Interaccion": "={{ $now.setZone('America/Mexico_City').toISO() }}",
-            "row_number": 0
+            "Fecha": "={{ $json.row[\"Fecha\"] }}",
+            "WhatsApp": "={{ $json.row[\"WhatsApp\"] }}",
+            "Servicio": "={{ $json.row[\"Servicio\"] }}",
+            "Nombre": "={{ $json.row[\"Nombre\"] }}",
+            "Negocio": "={{ $json.row[\"Negocio\"] }}",
+            "Giro": "={{ $json.row[\"Giro\"] }}",
+            "Ciudad": "={{ $json.row[\"Ciudad\"] }}",
+            "Tiene Web": "={{ $json.row[\"Tiene Web\"] }}",
+            "URL Web": "={{ $json.row[\"URL Web\"] }}",
+            "Segmento": "={{ $json.row[\"Segmento\"] }}",
+            "Senal Presupuesto": "={{ $json.row[\"Senal Presupuesto\"] }}",
+            "Paquete Recomendado": "={{ $json.row[\"Paquete Recomendado\"] }}",
+            "Elegible Offmenu": "={{ $json.row[\"Elegible Offmenu\"] }}",
+            "Disclosure Confirmado": "={{ $json.row[\"Disclosure Confirmado\"] }}",
+            "Etapa": "={{ $json.row[\"Etapa\"] }}",
+            "Score": "={{ $json.row[\"Score\"] }}",
+            "Etiquetas": "={{ $json.row[\"Etiquetas\"] }}",
+            "Notas": "={{ $json.row[\"Notas\"] }}",
+            "Conversation ID": "={{ $json.row[\"Conversation ID\"] }}",
+            "Followups Enviados": "={{ $json.row[\"Followups Enviados\"] }}",
+            "Ultima Interaccion": "={{ $json.row[\"Ultima Interaccion\"] }}",
+            "row_number": "={{ $json.row_number }}"
           },
           "matchingColumns": [
-            "WhatsApp"
+            "row_number"
           ],
           "schema": [
             {
@@ -524,7 +563,7 @@
           "convertFieldsToString": false
         },
         "options": {
-          "cellFormat": "USER_ENTERED"
+          "cellFormat": "RAW"
         }
       },
       "type": "n8n-nodes-base.googleSheets",
@@ -559,27 +598,27 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "Fecha": "={{ $now.setZone('America/Mexico_City').toFormat(\"yyyy-MM-dd HH:mm\") }}",
-            "WhatsApp": "={{ $('Normalizar Datos').item.json.sessionid }}",
-            "Nombre": "={{ $('Normalizar Datos').item.json.nombre }}",
-            "Negocio": "={{ $('Normalizar Datos').item.json.negocio }}",
-            "Giro": "={{ $('Normalizar Datos').item.json.giro }}",
-            "Ciudad": "={{ $('Normalizar Datos').item.json.ciudad }}",
-            "Servicio": "={{ $('Normalizar Datos').item.json.servicio_interes }}",
-            "Tiene Web": "={{ $('Normalizar Datos').item.json.tiene_web }}",
-            "URL Web": "={{ $('Normalizar Datos').item.json.url_web }}",
-            "Segmento": "={{ $('Normalizar Datos').item.json.segmento }}",
-            "Senal Presupuesto": "={{ $('Normalizar Datos').item.json.senal_presupuesto }}",
-            "Paquete Recomendado": "={{ $('Normalizar Datos').item.json.paquete_recomendado }}",
-            "Elegible Offmenu": "={{ $('Normalizar Datos').item.json.elegible_offmenu }}",
-            "Disclosure Confirmado": "={{ $('Normalizar Datos').item.json.disclosure_confirmado }}",
-            "Etapa": "={{ $('Normalizar Datos').item.json.etapa }}",
-            "Score": "={{ $('Normalizar Datos').item.json.score }}",
-            "Etiquetas": "={{ $('Normalizar Datos').item.json.etiquetas }}",
-            "Notas": "={{ $('Normalizar Datos').item.json.notas }}",
-            "Conversation ID": "={{ $('Normalizar Datos').item.json.conversation_id }}",
-            "Ultima Interaccion": "={{ $now.setZone('America/Mexico_City').toISO() }}",
-            "Followups Enviados": "0"
+            "Fecha": "={{ $json.row[\"Fecha\"] }}",
+            "WhatsApp": "={{ $json.row[\"WhatsApp\"] }}",
+            "Nombre": "={{ $json.row[\"Nombre\"] }}",
+            "Negocio": "={{ $json.row[\"Negocio\"] }}",
+            "Giro": "={{ $json.row[\"Giro\"] }}",
+            "Ciudad": "={{ $json.row[\"Ciudad\"] }}",
+            "Servicio": "={{ $json.row[\"Servicio\"] }}",
+            "Tiene Web": "={{ $json.row[\"Tiene Web\"] }}",
+            "URL Web": "={{ $json.row[\"URL Web\"] }}",
+            "Segmento": "={{ $json.row[\"Segmento\"] }}",
+            "Senal Presupuesto": "={{ $json.row[\"Senal Presupuesto\"] }}",
+            "Paquete Recomendado": "={{ $json.row[\"Paquete Recomendado\"] }}",
+            "Elegible Offmenu": "={{ $json.row[\"Elegible Offmenu\"] }}",
+            "Disclosure Confirmado": "={{ $json.row[\"Disclosure Confirmado\"] }}",
+            "Etapa": "={{ $json.row[\"Etapa\"] }}",
+            "Score": "={{ $json.row[\"Score\"] }}",
+            "Etiquetas": "={{ $json.row[\"Etiquetas\"] }}",
+            "Notas": "={{ $json.row[\"Notas\"] }}",
+            "Conversation ID": "={{ $json.row[\"Conversation ID\"] }}",
+            "Ultima Interaccion": "={{ $json.row[\"Ultima Interaccion\"] }}",
+            "Followups Enviados": "={{ $json.row[\"Followups Enviados\"] }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -776,7 +815,7 @@
           "attemptToConvertTypes": false,
           "convertFieldsToString": false
         },
-        "options": {}
+        "options": {"cellFormat": "RAW"}
       },
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
@@ -829,7 +868,7 @@
     },
     {
       "parameters": {
-        "jsCode": "  const lead = $('Normalizar Datos').item.json;                                                                                                                                     \n  const etapa = lead.etapa || '';                                                                                                                                                   \n                                                                                                                                                                                    \n  const eventos = {                                                                                                                                                                 \n    'nuevo': 'Lead',                                                                                                                                                                \n    'clasificado': 'Lead',                                                                                                                                                          \n    'cita_agendada': 'Schedule'\n  };                                                                                                                                                                                \n                                                                                                                                                                                  \n  if (!eventos[etapa]) return [{ json: { skip: true } }];                                                                                                                           \n                                                                                                                                                                                  \n  function sha256(str) {                                                                                                                                                            \n    function rightRotate(value, amount) {                                                                                                                                         \n      return (value >>> amount) | (value << (32 - amount));\n    }                                                                                                                                                                               \n    var mathPow = Math.pow;\n    var maxWord = mathPow(2, 32);                                                                                                                                                   \n    var i, j, result = '', words = [];                                                                                                                                            \n    var asciiBitLength = str.length * 8;                                                                                                                                            \n    var hash = [], k = [], primeCounter = 0, isComposite = {};                                                                                                                      \n    for (var candidate = 2; primeCounter < 64; candidate++) {                                                                                                                       \n      if (!isComposite[candidate]) {                                                                                                                                                \n        for (i = 0; i < 313; i += candidate) isComposite[i] = candidate;                                                                                                            \n        hash[primeCounter] = (mathPow(candidate, .5) * maxWord) | 0;                                                                                                                \n        k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;                                                                                                              \n      }                                                                                                                                                                             \n    }                                                                                                                                                                               \n    str += '\\x80';                                                                                                                                                                  \n    while (str.length % 64 - 56) str += '\\x00';                                                                                                                                   \n    for (i = 0; i < str.length; i++) {                                                                                                                                              \n      j = str.charCodeAt(i);\n      if (j >> 8) return;                                                                                                                                                           \n      words[i >> 2] |= j << ((3 - i) % 4) * 8;                                                                                                                                      \n    }                                                                                                                                                                               \n    words[words.length] = ((asciiBitLength / maxWord) | 0);                                                                                                                         \n    words[words.length] = (asciiBitLength);                                                                                                                                         \n    for (j = 0; j < words.length;) {                                                                                                                                              \n      var w = words.slice(j, j += 16);                                                                                                                                              \n      var oldHash = hash;                                                                                                                                                         \n      hash = hash.slice(0, 8);                                                                                                                                                      \n      for (i = 0; i < 64; i++) {                                                                                                                                                    \n        var w15 = w[i - 15], w2 = w[i - 2];\n        var a = hash[0], e = hash[4];                                                                                                                                               \n        var temp1 = hash[7] + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25)) + ((e & hash[5]) ^ ((~e) & hash[6])) + k[i] + (w[i] = (i < 16) ? w[i] : (w[i - 16] +  \n  (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3)) + w[i - 7] + (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))) | 0);                                          \n        var temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22)) + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));                                        \n        hash = [(temp1 + temp2) | 0].concat(hash);                                                                                                                                  \n        hash[4] = (hash[4] + temp1) | 0;                                                                                                                                            \n      }                                                                                                                                                                             \n      for (i = 0; i < 8; i++) hash[i] = (hash[i] + oldHash[i]) | 0;                                                                                                                 \n    }                                                                                                                                                                               \n    for (i = 0; i < 8; i++) {                                                                                                                                                     \n      for (j = 3; j + 1; j--) {                                                                                                                                                     \n        var b = (hash[i] >> (j * 8)) & 255;                                                                                                                                         \n        result += ((b < 16) ? 0 : '') + b.toString(16);\n      }                                                                                                                                                                             \n    }                                                                                                                                                                             \n    return result;                                                                                                                                                                  \n  }                                                                                                                                                                               \n\n  const eventName = eventos[etapa];\n  const phone = (lead.sessionid || '').replace(/\\D/g, '');\n                                                                                                                                                                                    \n  const payload = {\n    data: [{                                                                                                                                                                        \n      event_name: eventName,                                                                                                                                                        \n      event_time: Math.floor(Date.now() / 1000),\n      action_source: 'system_generated',                                                                                                                                            \n      user_data: {                                                                                                                                                                  \n        ph: [sha256(phone)],\n        country: [sha256('mx')]                                                                                                                                                     \n      },                                                                                                                                                                          \n      custom_data: {                                                                                                                                                                \n        etapa: etapa,                                                                                                                                                             \n        servicio: lead.servicio_interes || '',\n        segmento: lead.segmento || '',                                                                                                                                              \n        score: lead.score || ''\n      }                                                                                                                                                                             \n    }],                                                                                                                                                                                                                                                                                         \n  };                                                                                                                                                                              \n\n  return [{ json: { ...payload, skip: false } }];   "
+        "jsCode": "const lead = $('Resolver y Fusionar Lead').first().json.row;\nconst policy = $('Configuracion CAPI (confiable)').first().json;\nconst events = {nuevo: 'Lead', clasificado: 'Lead', cita_agendada: 'Schedule', llamada_agendada: 'Schedule'};\n// No payload or hashing until trusted consent and durable atomic idempotency exist.\n// A stable event_id alone does not implement durable deduplication.\nreturn [{ json: { skip: true, capi_status: 'blocked', capi_error: 'trusted_consent_and_durable_idempotency_integration_required', event_name: Object.prototype.hasOwnProperty.call(events, lead.Etapa) ? events[lead.Etapa] : '', enabled: policy.enabled === true } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -852,11 +891,12 @@
           "conditions": [
             {
               "id": "skip_capi",
-              "leftValue": "={{ $json.skip }}",
-              "rightValue": "false",
+              "leftValue": "={{ false }}",
+              "rightValue": true,
               "operator": {
-                "type": "string",
-                "operation": "equals"
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
               }
             }
           ],
@@ -889,7 +929,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "=={{ JSON.stringify({ data: $json.data }) }} ",
+        "jsonBody": "={{ JSON.stringify({ data: $json.data }) }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -900,33 +940,15 @@
       ],
       "id": "fdb3d321-e955-45b9-9d90-feceb8553080",
       "name": "Enviar CAPI",
-      "retryOnFail": true,
-      "maxTries": 2,
-      "waitBetweenTries": 2000,
+      "retryOnFail": false,
       "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "resp_status",
-              "name": "status",
-              "value": "ok",
-              "type": "string"
-            },
-            {
-              "id": "resp_message",
-              "name": "message",
-              "value": "Lead registrado/actualizado correctamente",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
+        "jsCode": "// Reached only after a successful CRM write; Sheets errors stop the workflow.\nconst input = $input.all()[0].json;\nconst body = input.body ?? input;\nconst failure = input.error || body.error || (input.statusCode >= 400 ? 'CAPI HTTP error' : null);\nconst blocked = !failure && input.skip === true && input.capi_status === 'blocked';\nconst sent = !failure && body.events_received === 1;\nconst capiStatus = blocked ? 'blocked' : sent ? 'sent' : 'error';\nconst capiError = blocked ? (input.capi_error || 'integration_required') : sent ? '' : (typeof failure === 'string' ? failure : failure?.message || 'CAPI response missing or invalid');\nreturn [{ json: { status: capiStatus === 'error' ? 'partial_error' : capiStatus === 'blocked' ? 'crm_ok_capi_blocked' : 'ok', crm_status: 'ok', capi_status: capiStatus, capi_error: capiError, labels_status: 'skipped_unsafe_replace', message: 'CRM registrado/actualizado; CAPI: ' + capiStatus } }];"
       },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
         2576,
         -112
@@ -936,9 +958,9 @@
     },
     {
       "parameters": {
-        "content": "## 📊 Registrar Lead v4\n\nSub-workflow llamado por el agente via tool.\nRecibe datos del lead y:\n1. Busca si ya existe (WhatsApp + Servicio)\n2. Actualiza o crea fila en Google Sheets\n3. Etiqueta la conversacion en Chatwoot\n4. Envia evento a Meta CAPI (Lead, Clasificacion, Cita)\n5. Devuelve respuesta al workflow padre\n\n**Eventos CAPI:**\n- nuevo → Lead\n- clasificado → Lead\n- cita_agendada → Schedule",
-        "height": 280,
-        "width": 400,
+        "content": "## Registrar Lead v4 — límites de seguridad\n\nEntrada única: validar WhatsApp internacional (8–15 dígitos) y conversation_id entero positivo seguro, opcional, antes de consultar Sheets. Buscar todas las filas del teléfono; seleccionar servicio explícito o exigir una única coincidencia. Abortar ambigüedad. Update por row_number validado, merge explícito de campos no vacíos, RAW en crear/actualizar. Fecha y Followups se preservan; Conversation ID sólo cambia con un valor explícito válido.\n\nCAPI BLOQUEADO SIEMPRE: enabled:false en Set confiable separado del trigger/LLM y gate constante falso. No hay payload ni hashing. Cambiar enabled NO habilita envíos. Antes del despliegue integrar consentimiento verificado externo y política confiable, idempotencia durable con claim atómico/clave estable, event_id validado y event_time estable del evento original. Un event_id solo NO garantiza deduplicación. Nada de esta infraestructura está implementado aquí. No reintentar POST a ciegas. Mapas futuros: nuevo/clasificado → Lead; cita_agendada/llamada_agendada → Schedule.\n\nEtiquetado Chatwoot DESCONECTADO: POST labels reemplaza etiquetas existentes; falta lectura+merge seguro. No enviar listas vacías ni reemplazar etiquetas previas. En CRM se unen etiquetas existentes.\n\nRespuesta separa crm_status y capi_status/capi_error. Errores Sheets detienen el flujo (no éxito CRM). Export inactivo, pinData vacío. Concurrencia Sheets y cambios de filas entre lectura/escritura siguen pendientes: no hay transacción ni exclusión mutua. No afirmar producción resuelta.",
+        "height": 680,
+        "width": 620,
         "color": 5
       },
       "type": "n8n-nodes-base.stickyNote",
@@ -953,11 +975,14 @@
   ],
   "pinData": {},
   "connections": {
+    "Validar Entrada": {"main": [[{"node": "Normalizar Datos", "type": "main", "index": 0}]]},
+    "Resolver y Fusionar Lead": {"main": [[{"node": "¿Lead existe?", "type": "main", "index": 0}]]},
+    "Configuracion CAPI (confiable)": {"main": [[{"node": "Preparar Evento CAPI", "type": "main", "index": 0}]]},
     "Trigger": {
       "main": [
         [
           {
-            "node": "Normalizar Datos",
+            "node": "Validar Entrada",
             "type": "main",
             "index": 0
           }
@@ -979,7 +1004,7 @@
       "main": [
         [
           {
-            "node": "¿Lead existe?",
+            "node": "Resolver y Fusionar Lead",
             "type": "main",
             "index": 0
           }
@@ -1008,7 +1033,7 @@
       "main": [
         [
           {
-            "node": "Etiquetar Chatwoot",
+            "node": "Configuracion CAPI (confiable)",
             "type": "main",
             "index": 0
           }
@@ -1019,24 +1044,14 @@
       "main": [
         [
           {
-            "node": "Etiquetar Chatwoot",
+            "node": "Configuracion CAPI (confiable)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Etiquetar Chatwoot": {
-      "main": [
-        [
-          {
-            "node": "Preparar Evento CAPI",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
+
     "Preparar Evento CAPI": {
       "main": [
         [
