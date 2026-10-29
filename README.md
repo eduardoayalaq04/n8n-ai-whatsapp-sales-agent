@@ -6,12 +6,13 @@ This repository contains sanitized workflow exports for WhatsApp pre-sales: mult
 
 **The agent does not close sales or collect payment.** Commercial closing, proposals and exceptional requests are handed to people. That human boundary is intentional.
 
-> **Status: portfolio reference, not a production-ready deployment.** The `Registrar_Lead` subworkflow is not included yet. Its export and interface validation are pending. Local tests exercise the reminder-selection JavaScript; they do not validate n8n integration, provider compatibility, delivery or business performance. All three exports are saved with `active: false` for staging review.
+> **Status: portfolio reference, not a production-ready deployment.** All four exports, including the `Registrar_Lead` dependency, are included and saved with `active: false`. Select the imported lead-registration workflow in the caller: its ID is still a placeholder. Local tests exercise exported JavaScript and static configuration; no n8n runtime, provider compatibility, delivery or business performance has been validated. CAPI is unconditionally blocked and Chatwoot label mutation is disconnected.
 
 ## What is represented in the exports
 
 - **Multimodal intake:** text, audio-transcription and GPT-4o image-analysis paths. The transcription node does not explicitly pin a model; GPT-4o is not claimed as the audio transcription model.
-- **Tool-based qualification:** service/intent rules, heuristic lead scoring, knowledge-base lookup and a call to the pending lead-registration subworkflow.
+- **Tool-based qualification:** service/intent rules, heuristic lead scoring, knowledge-base lookup and a call to the included lead-registration subworkflow (requires selecting its imported workflow ID).
+- **Lead registration:** partial merge into Sheets preserves existing mapped fields for absent, `null`, literal `'null'` or blank input; updates target a validated `row_number`, with RAW string cell values. This is not an atomic upsert and does not protect against concurrent row movement. CAPI and Chatwoot labels are not completed integrations; see the [contract and integration options](docs/lead-registration.md).
 - **Conversation memory:** PostgreSQL chat-memory configuration, keyed by sender; Redis is used separately for buffering and deduplication.
 - **Appointment tools:** calendar lookup, creation with Meet and update operations. Ownership and scheduling guards need deterministic enforcement before production use.
 - **Follow-ups:** deterministic templates selected by lead stage, service interest, counter and elapsed time; not LLM-generated follow-up copy.
@@ -29,7 +30,7 @@ flowchart TD
   B --> A[AI agent]
   P[(PostgreSQL conversation memory)] <--> A
   A --> K[Sheets knowledge base / SEO lookup]
-  A --> R[Registrar_Lead - export pending]
+  A --> R[Registrar_Lead - select imported workflow]
   A --> C[Google Calendar tools]
   A --> T[Telegram team notification]
   A --> O[Chatwoot reply]
@@ -47,17 +48,17 @@ The diagram describes the exported topology, including limitations; it is not ev
 - `AgencyBot - Flujo 1 v3.json`: primary intake, agent, tools, memory and response workflow.
 - `AgencyBot - Followup 24hrs v4.json`: follow-up eligibility targeting 6–24 hours since the CRM interaction timestamp. Production use requires proving that timestamp represents the latest inbound message and rechecking the messaging window.
 - `AgencyBot - Confirmar Cita.json`: weekday reminder workflow with locally tested event-selection logic.
-- `AgencyBot - Registrar Lead v4.json`: sub-workflow called by the agent via tool — upserts leads to Google Sheets, labels Chatwoot conversations, and sends server-side conversion events to Meta CAPI (Lead, Schedule).
+- `AgencyBot - Registrar Lead v4.json`: agent-tool dependency for Sheets lookup, partial merge and create/update. It returns separate `crm_status`, `capi_status` and `labels_status`; CAPI is always blocked without payload construction or hashing, and Chatwoot labeling is disconnected to avoid destructive replacement. Changing `enabled` does not enable CAPI sends. Trusted consent and a durable idempotency ledger remain to be implemented.
 
 ## Local tests — no credentials or paid calls
 
 Use a current supported Node.js release with `node:test` (Node 22 or newer recommended):
 
 ```bash
-node --test tests/workflows.test.cjs
+node --test tests/*.test.cjs
 ```
 
-Tests load the reminder Code node from the actual JSON export and execute it with synthetic fixtures, a fixed clock and no n8n runtime. Cases cover empty/single/multiple events, CDMX date boundaries, invalid/cancelled/past/all-day events, URL validation and conflicting conversation markers. The harness is for these reviewed local fixtures, not a security sandbox for arbitrary untrusted code.
+Tests load actual exports, check JSON/graph structure and execute reviewed code with synthetic fixtures, without credentials, network calls or an n8n runtime. Reminder cases use a fixed clock and cover event selection, CDMX date boundaries, invalid events, URLs and conversation markers. Lead-registration cases cover input validation, partial preservation, ambiguity, row-number targeting, RAW string mappings, unconditional CAPI blocking and response classification. Mocked provider responses are not proof of live delivery. The harness is for these reviewed local fixtures, not a security sandbox for arbitrary untrusted code.
 
 There is no hosted CI configured. No conversion lift, latency, cost savings, scoring accuracy or live integration pass rate is claimed.
 
@@ -69,7 +70,7 @@ There is no hosted CI configured. No conversion lift, latency, cost savings, sco
 2. Import the exports with workflows inactive. No n8n provisioning, Redis/PostgreSQL deployment or database migration is bundled.
 3. Add credentials using n8n's credential store: OpenAI, Calendar OAuth, Sheets OAuth, Telegram, Redis and PostgreSQL. Do not commit credentials or a populated environment file.
 4. Replace `YOUR_*` placeholders and reserved `*.example.com` URLs. Review hardcoded Chatwoot account `1` and inbox `2`; they must match staging, not be accepted as safe defaults.
-5. Add and review `Registrar_Lead`; document Sheets schemas, nullable-field rules, upsert keys and inbound/outbound timestamps. Its preservation behavior is not verified in this package.
+5. Import the included `AgencyBot - Registrar Lead v4.json`, then select that imported workflow in the primary workflow's `Registrar Lead` tool, replacing `YOUR_REGISTRAR_LEAD_WORKFLOW_ID`. Verify input/output mappings, Sheets headers and row-number behavior in staging. Review [lead-registration semantics and integration options](docs/lead-registration.md) before enabling any optional integration; leave CAPI blocked and Chatwoot labels disconnected until their prerequisites are implemented. Local preservation tests do not validate Sheets runtime behavior or concurrent writes.
 6. Configure restricted OAuth scopes, webhook authentication/origin verification, attachment egress controls, data retention and approved WhatsApp template `confirmacion_cita`. See [security boundaries](docs/security.md).
 7. Run local tests, then synthetic integration/smoke tests for intake, lead writes, booking, handoff, reminders and follow-up delivery. Verify permissions, failures, duplicates and message-window rules before any activation.
 
@@ -83,7 +84,8 @@ Credentials and deployment identifiers in these exports are placeholders; `pinDa
 
 ## Known limitations and next work
 
-- Missing lead-registration dependency and no end-to-end validation.
+- Lead-registration dependency is included but needs caller binding and end-to-end validation; Sheets read/merge/write is non-atomic and vulnerable to concurrent edits or row movement.
+- CAPI has no trusted consent integration or durable idempotency ledger and is unconditionally blocked; Chatwoot labels lack a safe concurrent merge and remain disconnected.
 - Webhook trust, calendar ownership and tool authorization are not enforced by prompt instructions.
 - Non-atomic deduplication/buffering and incomplete failure recovery.
 - Follow-up counter can advance after failed delivery; its timestamp/count validation needs hardening.
