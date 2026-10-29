@@ -47,7 +47,7 @@ The diagram describes the exported topology, including limitations; it is not ev
 - `AgencyBot - Flujo 1 v3.json`: primary intake, agent, tools, memory and response workflow.
 - `AgencyBot - Followup 24hrs v4.json`: follow-up eligibility targeting 6–24 hours since the CRM interaction timestamp. Production use requires proving that timestamp represents the latest inbound message and rechecking the messaging window.
 - `AgencyBot - Confirmar Cita.json`: weekday reminder workflow with locally tested event-selection logic.
-- **Pending:** `Registrar_Lead` export, schema/mapping review and integration tests. Adding the file alone does not establish readiness.
+- `AgencyBot - Registrar Lead v4.json`: sub-workflow called by the agent via tool — upserts leads to Google Sheets, labels Chatwoot conversations, and sends server-side conversion events to Meta CAPI (Lead, Schedule).
 
 ## Local tests — no credentials or paid calls
 

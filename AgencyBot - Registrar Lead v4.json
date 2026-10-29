@@ -1,0 +1,1093 @@
+{
+  "name": "AgencyBot - Registrar Lead v4",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "nombre"
+            },
+            {
+              "name": "negocio"
+            },
+            {
+              "name": "giro"
+            },
+            {
+              "name": "ciudad"
+            },
+            {
+              "name": "servicio_interes"
+            },
+            {
+              "name": "tiene_web"
+            },
+            {
+              "name": "url_web"
+            },
+            {
+              "name": "segmento"
+            },
+            {
+              "name": "senal_presupuesto"
+            },
+            {
+              "name": "paquete_recomendado"
+            },
+            {
+              "name": "elegible_offmenu"
+            },
+            {
+              "name": "disclosure_confirmado"
+            },
+            {
+              "name": "etapa"
+            },
+            {
+              "name": "score"
+            },
+            {
+              "name": "etiquetas"
+            },
+            {
+              "name": "notas"
+            },
+            {
+              "name": "sessionid"
+            },
+            {
+              "name": "conversation_id"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        704,
+        -112
+      ],
+      "id": "207427b3-8434-4299-a3ee-5029e07b54a3",
+      "name": "Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "rl_nombre",
+              "name": "nombre",
+              "value": "={{ $json.nombre === 'null' ? '' : $json.nombre }}",
+              "type": "string"
+            },
+            {
+              "id": "rl_negocio",
+              "name": "negocio",
+              "value": "={{ $json.negocio === 'null' ? '' : $json.negocio }}",
+              "type": "string"
+            },
+            {
+              "id": "rl_ciudad",
+              "name": "ciudad",
+              "value": "={{ $json.ciudad === 'null' ? '' : $json.ciudad }}",
+              "type": "string"
+            },
+            {
+              "id": "rl_servicio",
+              "name": "servicio_interes",
+              "value": "={{ $json.servicio_interes === 'null' ? '' : $json.servicio_interes }}",
+              "type": "string"
+            },
+            {
+              "id": "rl_tiene_web",
+              "name": "tiene_web",
+              "value": "={{ $json.tiene_web === 'null' ? '' : $json.tiene_web }}",
+              "type": "string"
+            },
+            {
+              "id": "rl_url_web",
+              "name": "url_web",
+              "value": "={{ $json.url_web === 'null' ? '' : $json.url_web }}",
+              "type": "string"
+            },
+            {
+              "id": "rl_etapa",
+              "name": "etapa",
+              "value": "={{ $json.etapa === 'null' ? '' : $json.etapa }}",
+              "type": "string"
+            },
+            {
+              "id": "rl_score",
+              "name": "score",
+              "value": "={{ $json.score === 'null' ? '' : $json.score }}",
+              "type": "string"
+            },
+            {
+              "id": "rl_etiquetas",
+              "name": "etiquetas",
+              "value": "={{ $json.etiquetas === 'null' ? '' : $json.etiquetas }}",
+              "type": "string"
+            },
+            {
+              "id": "rl_notas",
+              "name": "notas",
+              "value": "={{ $json.notas === 'null' ? '' : $json.notas }}",
+              "type": "string"
+            },
+            {
+              "id": "rl_sessionid",
+              "name": "sessionid",
+              "value": "={{ ($json.sessionid || '').toString().replace(/^\\+/, '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "rl_convid",
+              "name": "conversation_id",
+              "value": "={{ $json.conversation_id || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "rl_giro",
+              "name": "giro",
+              "value": "={{ $json.giro === 'null' ? '' : $json.giro }}",
+              "type": "string"
+            },
+            {
+              "id": "rl_segmento",
+              "name": "segmento",
+              "value": "={{ $json.segmento === 'null' ? '' : $json.segmento }}",
+              "type": "string"
+            },
+            {
+              "id": "rl_senal",
+              "name": "senal_presupuesto",
+              "value": "={{ $json.senal_presupuesto === 'null' ? '' : $json.senal_presupuesto }}",
+              "type": "string"
+            },
+            {
+              "id": "rl_paquete",
+              "name": "paquete_recomendado",
+              "value": "={{ $json.paquete_recomendado === 'null' ? '' : $json.paquete_recomendado }}",
+              "type": "string"
+            },
+            {
+              "id": "rl_elegible",
+              "name": "elegible_offmenu",
+              "value": "={{ $json.elegible_offmenu === 'null' ? '' : $json.elegible_offmenu }}",
+              "type": "string"
+            },
+            {
+              "id": "rl_disclosure",
+              "name": "disclosure_confirmado",
+              "value": "={{ $json.disclosure_confirmado === 'null' ? '' : $json.disclosure_confirmado }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        896,
+        -112
+      ],
+      "id": "64a947c0-98c0-404b-81da-33eec14f18e2",
+      "name": "Normalizar Datos"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEETS_LEADS_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Leads"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "WhatsApp",
+              "lookupValue": "={{ $('Normalizar Datos').item.json.sessionid }}"
+            },
+            {
+              "lookupColumn": "Servicio",
+              "lookupValue": "={{ $('Normalizar Datos').item.json.servicio_interes }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1104,
+        -112
+      ],
+      "id": "65d1b145-be35-43d3-8f18-3697a3e951a1",
+      "name": "Buscar Lead",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "your-email@example.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "lead_exists",
+              "leftValue": "={{ $json.WhatsApp }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1296,
+        -112
+      ],
+      "id": "32deac69-9eb4-4472-8436-a63df8656541",
+      "name": "¿Lead existe?"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEETS_LEADS_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Leads"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "WhatsApp": "={{ $('Normalizar Datos').item.json.sessionid }}",
+            "Servicio": "={{ $('Normalizar Datos').item.json.servicio_interes }}",
+            "Nombre": "={{ $('Normalizar Datos').item.json.nombre }}",
+            "Negocio": "={{ $('Normalizar Datos').item.json.negocio }}",
+            "Giro": "={{ $('Normalizar Datos').item.json.giro }}",
+            "Ciudad": "={{ $('Normalizar Datos').item.json.ciudad }}",
+            "Tiene Web": "={{ $('Normalizar Datos').item.json.tiene_web }}",
+            "URL Web": "={{ $('Normalizar Datos').item.json.url_web }}",
+            "Segmento": "={{ $('Normalizar Datos').item.json.segmento }}",
+            "Senal Presupuesto": "={{ $('Normalizar Datos').item.json.senal_presupuesto }}",
+            "Paquete Recomendado": "={{ $('Normalizar Datos').item.json.paquete_recomendado }}",
+            "Elegible Offmenu": "={{ $('Normalizar Datos').item.json.elegible_offmenu }}",
+            "Disclosure Confirmado": "={{ $('Normalizar Datos').item.json.disclosure_confirmado }}",
+            "Etapa": "={{ $('Normalizar Datos').item.json.etapa }}",
+            "Score": "={{ $('Normalizar Datos').item.json.score }}",
+            "Etiquetas": "={{ $('Normalizar Datos').item.json.etiquetas }}",
+            "Notas": "={{ $('Normalizar Datos').item.json.notas }}",
+            "Ultima Interaccion": "={{ $now.setZone('America/Mexico_City').toISO() }}",
+            "row_number": 0
+          },
+          "matchingColumns": [
+            "WhatsApp"
+          ],
+          "schema": [
+            {
+              "id": "Fecha",
+              "displayName": "Fecha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "WhatsApp",
+              "displayName": "WhatsApp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Nombre",
+              "displayName": "Nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Negocio",
+              "displayName": "Negocio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Giro",
+              "displayName": "Giro",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Ciudad",
+              "displayName": "Ciudad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Servicio",
+              "displayName": "Servicio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tiene Web",
+              "displayName": "Tiene Web",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "URL Web",
+              "displayName": "URL Web",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Segmento",
+              "displayName": "Segmento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Senal Presupuesto",
+              "displayName": "Senal Presupuesto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Paquete Recomendado",
+              "displayName": "Paquete Recomendado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Elegible Offmenu",
+              "displayName": "Elegible Offmenu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Disclosure Confirmado",
+              "displayName": "Disclosure Confirmado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Etapa",
+              "displayName": "Etapa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Score",
+              "displayName": "Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Etiquetas",
+              "displayName": "Etiquetas",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Notas",
+              "displayName": "Notas",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Conversation ID",
+              "displayName": "Conversation ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Ultima Interaccion",
+              "displayName": "Ultima Interaccion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Followups Enviados",
+              "displayName": "Followups Enviados",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1536,
+        -224
+      ],
+      "id": "570e1815-a73c-46df-85d3-83c1d50bef7e",
+      "name": "Actualizar Lead",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "your-email@example.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEETS_LEADS_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Leads"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Fecha": "={{ $now.setZone('America/Mexico_City').toFormat(\"yyyy-MM-dd HH:mm\") }}",
+            "WhatsApp": "={{ $('Normalizar Datos').item.json.sessionid }}",
+            "Nombre": "={{ $('Normalizar Datos').item.json.nombre }}",
+            "Negocio": "={{ $('Normalizar Datos').item.json.negocio }}",
+            "Giro": "={{ $('Normalizar Datos').item.json.giro }}",
+            "Ciudad": "={{ $('Normalizar Datos').item.json.ciudad }}",
+            "Servicio": "={{ $('Normalizar Datos').item.json.servicio_interes }}",
+            "Tiene Web": "={{ $('Normalizar Datos').item.json.tiene_web }}",
+            "URL Web": "={{ $('Normalizar Datos').item.json.url_web }}",
+            "Segmento": "={{ $('Normalizar Datos').item.json.segmento }}",
+            "Senal Presupuesto": "={{ $('Normalizar Datos').item.json.senal_presupuesto }}",
+            "Paquete Recomendado": "={{ $('Normalizar Datos').item.json.paquete_recomendado }}",
+            "Elegible Offmenu": "={{ $('Normalizar Datos').item.json.elegible_offmenu }}",
+            "Disclosure Confirmado": "={{ $('Normalizar Datos').item.json.disclosure_confirmado }}",
+            "Etapa": "={{ $('Normalizar Datos').item.json.etapa }}",
+            "Score": "={{ $('Normalizar Datos').item.json.score }}",
+            "Etiquetas": "={{ $('Normalizar Datos').item.json.etiquetas }}",
+            "Notas": "={{ $('Normalizar Datos').item.json.notas }}",
+            "Conversation ID": "={{ $('Normalizar Datos').item.json.conversation_id }}",
+            "Ultima Interaccion": "={{ $now.setZone('America/Mexico_City').toISO() }}",
+            "Followups Enviados": "0"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Fecha",
+              "displayName": "Fecha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "WhatsApp",
+              "displayName": "WhatsApp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Nombre",
+              "displayName": "Nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Negocio",
+              "displayName": "Negocio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Giro",
+              "displayName": "Giro",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Ciudad",
+              "displayName": "Ciudad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Servicio",
+              "displayName": "Servicio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tiene Web",
+              "displayName": "Tiene Web",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "URL Web",
+              "displayName": "URL Web",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Segmento",
+              "displayName": "Segmento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Senal Presupuesto",
+              "displayName": "Senal Presupuesto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Paquete Recomendado",
+              "displayName": "Paquete Recomendado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Elegible Offmenu",
+              "displayName": "Elegible Offmenu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Disclosure Confirmado",
+              "displayName": "Disclosure Confirmado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Etapa",
+              "displayName": "Etapa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Score",
+              "displayName": "Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Etiquetas",
+              "displayName": "Etiquetas",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Notas",
+              "displayName": "Notas",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Conversation ID",
+              "displayName": "Conversation ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Ultima Interaccion",
+              "displayName": "Ultima Interaccion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Followups Enviados",
+              "displayName": "Followups Enviados",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1536,
+        -16
+      ],
+      "id": "16e5b4c5-998d-43e9-9a0e-6932928cf9fe",
+      "name": "Crear Lead",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "your-email@example.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://your-chatwoot-instance.example.com/api/v1/accounts/1/conversations/{{ $('Normalizar Datos').item.json.conversation_id }}/labels",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "YOUR_CHATWOOT_API_TOKEN"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ labels: $('Normalizar Datos').item.json.etiquetas.split(',').map(e => e.trim()).filter(e => e.length > 0) }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1776,
+        -112
+      ],
+      "id": "e548414b-a867-4d0b-bc36-6455d404eea8",
+      "name": "Etiquetar Chatwoot",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "  const lead = $('Normalizar Datos').item.json;                                                                                                                                     \n  const etapa = lead.etapa || '';                                                                                                                                                   \n                                                                                                                                                                                    \n  const eventos = {                                                                                                                                                                 \n    'nuevo': 'Lead',                                                                                                                                                                \n    'clasificado': 'Lead',                                                                                                                                                          \n    'cita_agendada': 'Schedule'\n  };                                                                                                                                                                                \n                                                                                                                                                                                  \n  if (!eventos[etapa]) return [{ json: { skip: true } }];                                                                                                                           \n                                                                                                                                                                                  \n  function sha256(str) {                                                                                                                                                            \n    function rightRotate(value, amount) {                                                                                                                                         \n      return (value >>> amount) | (value << (32 - amount));\n    }                                                                                                                                                                               \n    var mathPow = Math.pow;\n    var maxWord = mathPow(2, 32);                                                                                                                                                   \n    var i, j, result = '', words = [];                                                                                                                                            \n    var asciiBitLength = str.length * 8;                                                                                                                                            \n    var hash = [], k = [], primeCounter = 0, isComposite = {};                                                                                                                      \n    for (var candidate = 2; primeCounter < 64; candidate++) {                                                                                                                       \n      if (!isComposite[candidate]) {                                                                                                                                                \n        for (i = 0; i < 313; i += candidate) isComposite[i] = candidate;                                                                                                            \n        hash[primeCounter] = (mathPow(candidate, .5) * maxWord) | 0;                                                                                                                \n        k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;                                                                                                              \n      }                                                                                                                                                                             \n    }                                                                                                                                                                               \n    str += '\\x80';                                                                                                                                                                  \n    while (str.length % 64 - 56) str += '\\x00';                                                                                                                                   \n    for (i = 0; i < str.length; i++) {                                                                                                                                              \n      j = str.charCodeAt(i);\n      if (j >> 8) return;                                                                                                                                                           \n      words[i >> 2] |= j << ((3 - i) % 4) * 8;                                                                                                                                      \n    }                                                                                                                                                                               \n    words[words.length] = ((asciiBitLength / maxWord) | 0);                                                                                                                         \n    words[words.length] = (asciiBitLength);                                                                                                                                         \n    for (j = 0; j < words.length;) {                                                                                                                                              \n      var w = words.slice(j, j += 16);                                                                                                                                              \n      var oldHash = hash;                                                                                                                                                         \n      hash = hash.slice(0, 8);                                                                                                                                                      \n      for (i = 0; i < 64; i++) {                                                                                                                                                    \n        var w15 = w[i - 15], w2 = w[i - 2];\n        var a = hash[0], e = hash[4];                                                                                                                                               \n        var temp1 = hash[7] + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25)) + ((e & hash[5]) ^ ((~e) & hash[6])) + k[i] + (w[i] = (i < 16) ? w[i] : (w[i - 16] +  \n  (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3)) + w[i - 7] + (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))) | 0);                                          \n        var temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22)) + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));                                        \n        hash = [(temp1 + temp2) | 0].concat(hash);                                                                                                                                  \n        hash[4] = (hash[4] + temp1) | 0;                                                                                                                                            \n      }                                                                                                                                                                             \n      for (i = 0; i < 8; i++) hash[i] = (hash[i] + oldHash[i]) | 0;                                                                                                                 \n    }                                                                                                                                                                               \n    for (i = 0; i < 8; i++) {                                                                                                                                                     \n      for (j = 3; j + 1; j--) {                                                                                                                                                     \n        var b = (hash[i] >> (j * 8)) & 255;                                                                                                                                         \n        result += ((b < 16) ? 0 : '') + b.toString(16);\n      }                                                                                                                                                                             \n    }                                                                                                                                                                             \n    return result;                                                                                                                                                                  \n  }                                                                                                                                                                               \n\n  const eventName = eventos[etapa];\n  const phone = (lead.sessionid || '').replace(/\\D/g, '');\n                                                                                                                                                                                    \n  const payload = {\n    data: [{                                                                                                                                                                        \n      event_name: eventName,                                                                                                                                                        \n      event_time: Math.floor(Date.now() / 1000),\n      action_source: 'system_generated',                                                                                                                                            \n      user_data: {                                                                                                                                                                  \n        ph: [sha256(phone)],\n        country: [sha256('mx')]                                                                                                                                                     \n      },                                                                                                                                                                          \n      custom_data: {                                                                                                                                                                \n        etapa: etapa,                                                                                                                                                             \n        servicio: lead.servicio_interes || '',\n        segmento: lead.segmento || '',                                                                                                                                              \n        score: lead.score || ''\n      }                                                                                                                                                                             \n    }],                                                                                                                                                                                                                                                                                         \n  };                                                                                                                                                                              \n\n  return [{ json: { ...payload, skip: false } }];   "
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1984,
+        -112
+      ],
+      "id": "d381c9dc-0a87-4549-9b18-cefc5ec1ae33",
+      "name": "Preparar Evento CAPI"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "skip_capi",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": "false",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2176,
+        -112
+      ],
+      "id": "87c3a660-7a2c-4227-b490-92f70be679c3",
+      "name": "Enviar CAPI?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v18.0/YOUR_PIXEL_ID/events?access_token=YOUR_META_CAPI_ACCESS_TOKEN",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "=={{ JSON.stringify({ data: $json.data }) }} ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2384,
+        -192
+      ],
+      "id": "fdb3d321-e955-45b9-9d90-feceb8553080",
+      "name": "Enviar CAPI",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "resp_status",
+              "name": "status",
+              "value": "ok",
+              "type": "string"
+            },
+            {
+              "id": "resp_message",
+              "name": "message",
+              "value": "Lead registrado/actualizado correctamente",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2576,
+        -112
+      ],
+      "id": "294b993f-b2e3-4ee7-a90a-a1d11320b950",
+      "name": "Respuesta"
+    },
+    {
+      "parameters": {
+        "content": "## 📊 Registrar Lead v4\n\nSub-workflow llamado por el agente via tool.\nRecibe datos del lead y:\n1. Busca si ya existe (WhatsApp + Servicio)\n2. Actualiza o crea fila en Google Sheets\n3. Etiqueta la conversacion en Chatwoot\n4. Envia evento a Meta CAPI (Lead, Clasificacion, Cita)\n5. Devuelve respuesta al workflow padre\n\n**Eventos CAPI:**\n- nuevo → Lead\n- clasificado → Lead\n- cita_agendada → Schedule",
+        "height": 280,
+        "width": 400,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        656,
+        -384
+      ],
+      "id": "b348d03f-1b15-4607-89f0-579effa3dac2",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalizar Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar Datos": {
+      "main": [
+        [
+          {
+            "node": "Buscar Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Lead": {
+      "main": [
+        [
+          {
+            "node": "¿Lead existe?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Lead existe?": {
+      "main": [
+        [
+          {
+            "node": "Actualizar Lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Crear Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar Lead": {
+      "main": [
+        [
+          {
+            "node": "Etiquetar Chatwoot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear Lead": {
+      "main": [
+        [
+          {
+            "node": "Etiquetar Chatwoot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Etiquetar Chatwoot": {
+      "main": [
+        [
+          {
+            "node": "Preparar Evento CAPI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Evento CAPI": {
+      "main": [
+        [
+          {
+            "node": "Enviar CAPI?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar CAPI?": {
+      "main": [
+        [
+          {
+            "node": "Enviar CAPI",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar CAPI": {
+      "main": [
+        [
+          {
+            "node": "Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "40a3e717-7440-4a4b-9fe3-5547c77285e8",
+  "meta": {
+    "instanceId": "YOUR_N8N_INSTANCE_ID"
+  },
+  "nodeGroups": [],
+  "id": "YOUR_WORKFLOW_ID",
+  "tags": []
+}
