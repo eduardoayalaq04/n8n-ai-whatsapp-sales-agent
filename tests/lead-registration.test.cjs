@@ -3,7 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
-const workflow = JSON.parse(fs.readFileSync(require('node:path').join(__dirname, '../AgencyBot - Registrar Lead v4.json'), 'utf8'));
+const workflow = JSON.parse(fs.readFileSync(require('node:path').join(__dirname, '../workflows/02-lead-registration.json'), 'utf8'));
 const node = name => { const n = workflow.nodes.find(n => n.name === name); assert.ok(n, name); return n; };
 function run(name, json = {}, refs = {}, rows = [json]) {
   const code = node(name).parameters.jsCode;

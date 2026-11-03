@@ -6,7 +6,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
-const workflow = JSON.parse(fs.readFileSync(path.join(root, 'AgencyBot - Confirmar Cita.json'), 'utf8'));
+const workflow = JSON.parse(fs.readFileSync(path.join(root, 'workflows/04-appointment-reminder.json'), 'utf8'));
 const code = workflow.nodes.find(node => node.name === 'Extraer Datos').parameters.jsCode;
 const NOW = '2026-10-27T15:00:00.000Z'; // 09:00 CDMX
 function run(items, now = NOW) {
@@ -32,10 +32,10 @@ function event(overrides = {}) {
 function rejected(overrides) { assert.deepEqual(run([event(overrides)]), []); }
 
 test('exports presentes: JSON válido, nombres únicos y conexiones existentes', () => {
-  const files = fs.readdirSync(root).filter(file => file.endsWith('.json'));
-  assert.ok(files.length > 0);
+  const files = fs.readdirSync(path.join(root, 'workflows')).filter(file => file.endsWith('.json'));
+  assert.equal(files.length, 4);
   for (const file of files) {
-    const data = JSON.parse(fs.readFileSync(path.join(root, file), 'utf8'));
+    const data = JSON.parse(fs.readFileSync(path.join(root, 'workflows', file), 'utf8'));
     assert.ok(Array.isArray(data.nodes), file);
     const names = new Set(data.nodes.map(node => node.name));
     assert.equal(names.size, data.nodes.length, file);

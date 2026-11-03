@@ -1,10 +1,10 @@
 # Lead registration: contract and integration boundaries
 
-`AgencyBot - Registrar Lead v4.json` is the included dependency for the primary workflow's `Registrar_Lead` tool. It is an inactive portfolio export, not a validated production service. Local tests exercise exported code and configuration, not the n8n runtime or live providers. Sheets registration is represented; Meta CAPI sending and safe Chatwoot label synchronization are **not complete implementations**.
+`workflows/02-lead-registration.json` is the included dependency for the primary workflow's `Registrar_Lead` tool. It is an inactive portfolio export, not a validated production service. Local tests exercise exported code and configuration, not the n8n runtime or live providers. Sheets registration is represented; Meta CAPI sending and safe Chatwoot label synchronization are **not complete implementations**.
 
 ## Bind the included dependency in staging
 
-Import all four exports into an isolated n8n instance with non-production accounts and keep them inactive during review. In `AgencyBot - Flujo 1 v3.json`, open the `Registrar Lead` tool and select the imported `AgencyBot - Registrar Lead v4` workflow instead of `YOUR_REGISTRAR_LEAD_WORKFLOW_ID`. The placeholder does not automatically resolve to the imported dependency. Verify the tool's input mappings and returned output in your n8n version; no compatible runtime version or end-to-end execution has been established.
+Import all four exports into an isolated n8n instance with non-production accounts and keep them inactive during review. In `workflows/01-main-intake-agent.json`, open the `Registrar Lead` tool and select the imported `AgencyBot - Registrar Lead v4` workflow instead of `YOUR_REGISTRAR_LEAD_WORKFLOW_ID`. The placeholder does not automatically resolve to the imported dependency. Verify the tool's input mappings and returned output in your n8n version; no compatible runtime version or end-to-end execution has been established.
 
 Configure Sheets credentials through n8n's credential store, replace `YOUR_GOOGLE_SHEETS_LEADS_ID`, and verify the `Leads` tab, headers and lookup/write behavior. Use synthetic data only. Do not reconnect the retained Chatwoot label node or bypass the CAPI gate to make a smoke test pass.
 

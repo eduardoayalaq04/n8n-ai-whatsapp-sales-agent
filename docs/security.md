@@ -28,7 +28,7 @@ The initial commit retains a local-machine author address and the earlier commer
 
 ## Lead-registration boundaries
 
-The fourth export, `AgencyBot - Registrar Lead v4.json`, is included, inactive and has empty `pinData`. The caller still uses `YOUR_REGISTRAR_LEAD_WORKFLOW_ID`: select the imported workflow and verify its interface in staging. Inspect credentials, URLs, identifiers and embedded code before reuse, then rerun secret scans and synthetic end-to-end tests. No n8n runtime has been validated.
+The fourth export, `workflows/02-lead-registration.json`, is included, inactive and has empty `pinData`. The caller still uses `YOUR_REGISTRAR_LEAD_WORKFLOW_ID`: select the imported workflow and verify its interface in staging. Inspect credentials, URLs, identifiers and embedded code before reuse, then rerun secret scans and synthetic end-to-end tests. No n8n runtime has been validated.
 
 The exported merge preserves existing mapped fields when input is absent, `null`, literal `'null'` or blank, preserves `Fecha` and `Followups Enviados` on update, and changes `Conversation ID` only for a supplied valid value. `Ultima Interaccion` is the write-time timestamp, not verified latest-inbound time. Matching rejects ambiguous rows and updates a validated `row_number`. Sheets create/update use RAW string cell values to avoid formula interpretation at that write boundary; this does not sanitize later CSV exports or other consumers. There is no transaction, atomic uniqueness enforcement, lock or protection against concurrent row insertion, deletion, sorting or movement between lookup and update. Concurrent writers can create duplicates, lose updates or target the wrong row.
 
